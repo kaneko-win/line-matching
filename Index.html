@@ -1,0 +1,66 @@
+HTML
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>連携処理中...</title>
+    <!-- LINEのシステムを動かすためのライブラリ（SDK）を読み込みます -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px;">
+        <p id="status-text">読み込み中...</p>
+    </div>
+
+    <script>
+        // ーーー 設定エリア ーーー
+        const MY_LIFF_ID = 'ここにあなたのLIFF IDを入れる';
+        const MAKE_WEBHOOK_URL = 'ここにMakeのWebhook URLを入れる';
+        // ーーーーーーーーーーーーー
+
+        // LIFFの初期化
+        liff.init({ liffId: MY_LIFF_ID }).then(() => {
+            // ログインしていなければ、LINEのログイン画面を出す
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            } else {
+                document.getElementById('status-text').innerText = 'データを送信中...';
+                
+                // 1. LINEのプロフィール（UID）を取得
+                const context = liff.getContext();
+                const lineUserId = context.userId;
+
+                // 2. スマホのURLから「暗号化された管理番号」を抽出
+                const urlParams = new URLSearchParams(window.location.search);
+                const encryptedData = urlParams.get('data');
+
+                // 3. MakeのWebhookへデータを送信
+                fetch(MAKE_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        uid: lineUserId,
+                        data: encryptedData
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        document.getElementById('status-text').innerText = '登録が完了しました！';
+                        // 3秒後に自動でLIFF画面を閉じる
+                        setTimeout(() => { liff.closeWindow(); }, 3000);
+                    } else {
+                        document.getElementById('status-text').innerText = 'エラーが発生しました。';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('status-text').innerText = '通信エラーが発生しました。';
+                });
+            }
+        }).catch((err) => {
+            document.getElementById('status-text').innerText = '初期化に失敗しました。';
+            console.error(err);
+        });
+    </script>
+</body>
+</html>
